@@ -1,0 +1,520 @@
+﻿
+
+
+@{
+    ViewData["Title"] = "save";
+ 
+}
+<style>
+    #spinner-div {
+  position: fixed;
+  display: none;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  text-align: center;
+  background-color: rgba(255, 255, 255, 0.8);
+  z-index: 2;
+}
+
+</style>
+<div id="spinner-div" class="pt-5">
+  <div class="spinner-border text-primary" role="status">
+     
+  </div>
+</div>
+
+   <div class="row">
+                                    <div class="col-xl-4 col-lg-6 col-md-12 mb-1">
+                                        <fieldset class="form-group">
+                                            <label for="basicInput"> نام منطقه</label>
+                                            <input type="text" class="form-control" id="name">
+                                        </fieldset>
+
+                                        <fieldset class="form-group">
+                                            <label for="basicInput"> مشخصه منطقه</label>
+                                            <input type="text" class="form-control" id="description">
+                                        </fieldset>
+                                       
+                                    </div>
+
+                         
+                                                      
+
+                                                        <div class="col-xl-12 col-lg-12 col-md-12 mb-1">
+                                                            <fieldset class="form-group">
+                                                                <br />
+                                                                <a onclick="myFunction()" class="btn btn-success col-md-12"> ثبت  </a>
+                                                            </fieldset>
+                                                        </div>
+                                                   
+                                             @* <div class="col-xl-12 col-lg-12 col-md-12 mb-1">
+                                                            <fieldset class="form-group">
+                                                                <br />
+                                                                <a onclick="myFunction2()" class="btn btn-success col-md-12"> refresh  </a>
+                                                            </fieldset>
+                                                        </div>
+                                          *@
+                                       
+                                  
+                                </div>
+
+
+
+
+ <script src="~/Sweetalert2/sweetalert2.min.js"></script>
+ 
+ 
+ 
+ @* <script src="~/offline-0.7.11/offline.min.js"></script>
+   <link href="~/offline-0.7.11/themes/offline-theme-chrome.css" rel="stylesheet" />
+   <link href="~/offline-0.7.11/themes/offline-language-english.css" rel="stylesheet" />*@
+
+ <link href="~/Sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+
+<script>
+    let StatusConnection=true;
+    let ChangeStatus=false;
+    let StatusIsTryForSend=false;
+
+  function fetchdata(){
+      if(ChangeStatus==true && StatusIsTryForSend==true){
+         console.log("try for fetch data");
+          myFunction2();
+      }
+ $.ajax({
+  contentType: 'application/x-www-form-urlencoded',
+        dataType: 'json',
+        type: "POST",
+        url: "checkstatus",
+       
+  success: function(data){
+      if(StatusConnection==false){ ChangeStatus=true;StatusIsTryForSend=true; }else{ ChangeStatus=false;}
+       StatusConnection=true;
+     console.log(`ok    StatusConnection=${StatusConnection}`);
+  },
+   error: function (request, status, error) {
+       if(StatusConnection==true){ ChangeStatus=true;StatusIsTryForSend=false;}else{ ChangeStatus=false;}
+       StatusConnection=false;
+       console.log(`fail    StatusConnection=${StatusConnection}`);
+   },
+     complete:function(data){
+   setTimeout(fetchdata,5000);
+  }
+ });
+}
+
+$(document).ready(function(){
+ setTimeout(fetchdata,5000);
+});
+
+
+       function myFunction(){
+          let datas=new Array();
+          var Idescription = document.getElementById("description").value;
+           var Iname = document.getElementById("name").value;
+          
+
+   if (!window.indexedDB) {
+    console.log(`Your browser doesn't support IndexedDB`);
+    return;
+}
+
+const request = indexedDB.open('CRM', 1);
+request.onerror = (event) => {
+    console.error(`Database error: ${event.target.errorCode}`);
+};
+
+
+ // create the  object store and indexes
+ request.onupgradeneeded = (event) => {
+     let db = event.target.result;
+
+     // create the  object store 
+     // with auto-increment id
+     let store = db.createObjectStore('regions', {
+         autoIncrement: true
+     });
+
+    
+   
+ };
+
+
+
+request.onsuccess = (event) => {
+    
+    const db = event.target.result;
+
+     insertContact(db, {
+         name: Iname,
+         des: Idescription,
+        
+        
+     });
+     
+   
+   
+      datas.push({name:Iname, des:Idescription});
+ 
+    
+        var postData = {
+                        'data':datas,
+                    };
+             //console.log("start");
+         
+// console.log("ajax");
+ swal.fire({
+            title: 'ثبت  ',
+            text: "آیا میخواهید ثبت  را انجام دهید؟",
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'بله ثبت  انجام شود',
+            cancelButtonText: 'خیر'
+        }).then((result) => {
+                if (result.value) {
+                    if(StatusConnection==true){
+
+   $.ajax({
+    
+        contentType: 'application/x-www-form-urlencoded',
+        dataType: 'json',
+        type: "POST",
+        url: "save",
+        data: postData,
+         beforeSend: function() {
+       
+            // Show loading
+             $("#spinner-div").show();
+           // executed = true;
+        
+    },
+    complete: function() {
+        // Hide loading
+          $("#spinner-div").hide();
+    },
+        success: function(data) {
+            checkOnline="sucsess";
+            //window.console.log('Successful sent data');
+    //       window.console.log(`Successful ${checkOnline}`);
+             deleteContacts();
+       //    window.console.log('delet ok');
+        },
+         error: function (request, status, error) {
+         //    checkOnline="erorr";
+          // window.console.log('error');
+      //    window.console.log(`error ${checkOnline}`);
+        Swal.fire({
+  icon: 'error',
+  title: 'Oops...',
+  text: 'شما فالاین میباشید !',
+  footer: '<a href="">اطلاعات بلافاصله بعد از اتصال به اینترنت خودکار ارسال میگردد</a>'
+})
+
+         
+         }
+    });
+    }else{
+        alert("offline");
+    }
+
+    document.getElementById("description").value=" ";
+    document.getElementById("name").value=" ";
+     }//if
+            })//then
+
+
+
+//     setTimeout(() => {   window.console.log(`if  ${checkOnline}`);},1000);
+     
+    //if(checkOnline==true){
+
+    //  deleteContact(db);
+    //}
+};
+
+
+
+
+
+
+ function insertContact(db, info) {
+    // create a new transaction
+    const txn = db.transaction('regions', 'readwrite');
+
+    // get the Contacts object store
+    const store = txn.objectStore('regions');
+    //
+    let query = store.put(info);
+   //console.log(query);
+    // handle success case
+    query.onsuccess = function (event) {
+  //    console.log("insert query ok");
+    };
+
+    // handle the error case
+    query.onerror = function (event) {
+     //   console.log(event.target.errorCode);
+       //   console.log("err");
+    }
+
+    // close the database once the 
+    // transaction completes
+    txn.oncomplete = function () {
+        db.close();
+    };
+}
+
+
+function getAllContacts(db) {
+    const txn = db.transaction('regions', "readonly");
+    const objectStore = txn.objectStore('regions');
+
+    objectStore.openCursor().onsuccess = (event) => {
+        let cursor = event.target.result;
+        if (cursor) {
+            let contact = cursor.value;
+           // console.log(contact);
+           datas.push(contact);
+            cursor.continue();
+        }
+      
+       // console.log("in curser");
+    };
+    // close the database connection
+    txn.oncomplete = function () {
+        db.close();
+    };
+   //   console.log("get method finish");
+}
+
+  function deleteContacts() {
+        // create a new transaction
+        const request = indexedDB.open('CRM', 1);
+
+        request.onsuccess = (event) => {
+    
+    const dbs = event.target.result;
+
+        const txn = dbs.transaction('regions', 'readwrite');
+
+        // get the Contacts object store
+        const store = txn.objectStore('regions');
+        //
+        let query = store.clear();
+
+        // handle the success case
+        query.onsuccess = function (event) {
+          //  console.log(event);
+        };
+
+        // handle the error case
+        query.onerror = function (event) {
+            console.log(event.target.errorCode);
+        }
+
+        // close the database once the 
+        // transaction completes
+        txn.oncomplete = function () {
+            dbs.close();
+        };
+
+    }
+
+ }
+ 
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ function myFunction2(){
+ 
+
+
+    let datas=new Array();
+ 
+ const request = indexedDB.open('CRM', 1);
+request.onerror = (event) => {
+    console.error(`Database error: ${event.target.errorCode}`);
+};
+
+request.onsuccess = (event) => {
+   
+};
+
+ request.onupgradeneeded = (event) => {
+     let db = event.target.result;
+
+   
+     let store = db.createObjectStore('regions', {
+         autoIncrement: true
+     });
+
+     let index = store.createIndex('name', 'name');
+   
+ };
+
+
+
+request.onsuccess = (event) => {
+    
+    const db = event.target.result;
+
+    
+     getAllContacts(db);
+      
+  
+    
+        var postData = {
+                        'data':datas,
+                    };
+                  //  console.log(postData);
+                  //   console.log(datas);
+                     setTimeout(() => {
+
+   $.ajax({
+    
+        contentType: 'application/x-www-form-urlencoded',
+        dataType: 'json',
+        type: "POST",
+        url: "save",
+        data: postData,
+        success: function(data) {
+           
+            window.console.log('Successful sent data');
+          
+        },
+         error: function (request, status, error) {
+          
+           window.console.log('error');
+         
+         
+         }
+    });}, 100);
+    if(true){
+        console.log("delete start");
+      deleteContact(db);}
+};
+
+
+
+
+
+
+
+
+
+function getAllContacts(db) {
+    const txn = db.transaction('regions', "readonly");
+    const objectStore = txn.objectStore('regions');
+
+    objectStore.openCursor().onsuccess = (event) => {
+        let cursor = event.target.result;
+        if (cursor) {
+            let contact = cursor.value;
+           // console.log(contact);
+           datas.push(contact);
+            cursor.continue();
+        }
+      
+       // console.log("in curser");
+    };
+    // close the database connection
+    txn.oncomplete = function () {
+        db.close();
+    };
+   //   console.log("get method finish");
+}
+
+ function deleteContact(db) {
+        // create a new transaction
+        const txn = db.transaction('regions', 'readwrite');
+
+        // get the Contacts object store
+        const store = txn.objectStore('regions');
+        //
+        let query = store.clear();
+
+        // handle the success case
+        query.onsuccess = function (event) {
+          //  console.log(event);
+        };
+
+        // handle the error case
+        query.onerror = function (event) {
+            console.log(event.target.errorCode);
+        }
+
+        // close the database once the 
+        // transaction completes
+        txn.oncomplete = function () {
+            db.close();
+        };
+
+    }
+ 
+ 
+ 
+ 
+ 
+ }
+
+    
+
+</script>
